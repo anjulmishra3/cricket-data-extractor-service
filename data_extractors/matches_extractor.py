@@ -1,9 +1,10 @@
 from data_extractors.table_schemas import connection, meta, engine, matches
 
 import requests
+import datetime
 
 
-LIST_MATCHES_URL = "https://cricketapi.platform.iplt20.com//fixtures?page=1&pageSize=300"
+LIST_MATCHES_URL = "https://cricketapi.platform.iplt20.com//fixtures"
 
 meta.create_all(engine)
 
@@ -11,9 +12,10 @@ meta.create_all(engine)
 def process_list_matches_response(response_dict):
     return_list = []
 
-    for matches in response_dict.get("content", []):
-        if "IPL" in matches.get("tournamentLabel", ""):
-            details = matches.get("scheduleEntry", {})
+    for match in response_dict.get("content", []):
+        # print(match.get("tournamentLabel", ""))
+        if ("IPL " in match.get("tournamentLabel", "")) and ("Women" not in match.get("tournamentLabel", "")) and (datetime.datetime.strptime(match.get("timestamp").split("+")[0], "%Y-%m-%dT%H:%M:%S") < datetime.datetime.now()):
+            details = match.get("scheduleEntry", {})
             match_dict = {
                 "match_id": details.get("matchId", {}).get("id"),
                 "match_name": details.get("matchId", {}).get("name"),
@@ -37,8 +39,8 @@ def process_list_matches_response(response_dict):
                 "team_1_innings_declared": details.get("team1", {}).get("innings", [])[0].get("declared") if details.get("team1", {}).get("innings", []) else None,
                 "team_1_innings_over_progress": details.get("team1", {}).get("innings", [])[0].get("overProgress") if details.get("team1", {}).get("innings", []) else None,
                 "team_1_innings_run_rate": details.get("team1", {}).get("innings", [])[0].get("runRate") if details.get("team1", {}).get("innings", []) else None,
-                "team_2_id": details.get("team1", {}).get("team", {}).get("id"),
-                "team_2_innings_number": details.get("team1", {}).get("innings", [])[0].get("inningsNumber") if details.get("team1", {}).get("innings", []) else None,
+                "team_2_id": details.get("team2", {}).get("team", {}).get("id"),
+                "team_2_innings_number": details.get("team2", {}).get("innings", [])[0].get("inningsNumber") if details.get("team2", {}).get("innings", []) else None,
                 "team_2_innings_runs": details.get("team2", {}).get("innings", [])[0].get("runs") if details.get("team2", {}).get("innings", []) else None,
                 "team_2_innings_wickets": details.get("team2", {}).get("innings", [])[0].get("wkts") if details.get("team2", {}).get("innings", []) else None,
                 "team_2_innings_balls": details.get("team2", {}).get("innings", [])[0].get("ballsFaced") if details.get("team2", {}).get("innings", []) else None,
@@ -48,10 +50,10 @@ def process_list_matches_response(response_dict):
                 "team_2_innings_over_progress": details.get("team2", {}).get("innings", [])[0].get("overProgress") if details.get("team2", {}).get("innings", []) else None,
                 "team_2_innings_run_rate": details.get("team2", {}).get("innings", [])[0].get("runRate") if details.get("team2", {}).get("innings", []) else None,
                 "match_overs_limit": details.get("oversLimit"),
-                "match_result_only": matches.get("resultOnly"),
-                "match_timestampMs": matches.get("timestampMs"),
-                "match_endTimestampMs": matches.get("endTimestampMs"),
-                "match_endTimestamp": matches.get("endTimestamp"),
+                "match_result_only": match.get("resultOnly"),
+                "match_timestampMs": match.get("timestampMs"),
+                "match_endTimestampMs": match.get("endTimestampMs"),
+                "match_endTimestamp": match.get("endTimestamp"),
             }
 
             return_list.append(match_dict)
@@ -71,16 +73,16 @@ def list_matches(list_matches_url):
     if response.status_code == 200:
         response_dict = response.json()
     else:
+        print(response.status_code, response.text)
         response_dict = {}
 
     pages = response_dict.get("pageInfo", {}).get("numPages")
 
     final_matches_list.extend(process_list_matches_response(response_dict))
 
-
-
     for page in range(1, pages):
         params["page"] = page
+        # print(params)
         response = requests.get(url=list_matches_url, params=params)
         if response.status_code == 200:
             response_dict = response.json()
@@ -89,7 +91,9 @@ def list_matches(list_matches_url):
 
         final_matches_list.extend(process_list_matches_response(response_dict))
 
-    print([match_id.get("match_id") for match_id in final_matches_list])
+        # print(len(final_matches_list))
+
+    # print(set([match_id.get("team_1_id") for match_id in final_matches_list]))
 
     return final_matches_list
 
