@@ -90,7 +90,6 @@ def insert_players(players_table, connection_object):
 
     # players_dict = list_players(LIST_PLAYERS_URL)
     list_players(LIST_PLAYERS_URL)
-    print(len(list(players_dict.values())))
 
     try:
         return_value = connection_object.execute(players_table.insert(), list(players_dict.values()))
