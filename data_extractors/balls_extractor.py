@@ -6,9 +6,12 @@ import requests
 import datetime
 
 
+
 LIST_MATCHES_URL = "https://cricketapi.platform.iplt20.com//fixtures/"
 
+
 meta.create_all(engine)
+
 
 
 def process_list_balls_response(response_dict, match_id, tournament_id, venue_id, team_1_id, team_2_id):
@@ -22,6 +25,7 @@ def process_list_balls_response(response_dict, match_id, tournament_id, venue_id
                     "match_id": match_id,
                     "tournament_id": tournament_id,
                     "venue_id": venue_id,
+
                     "team_id": team_1_id if int(key.split(".")[0]) == 1 else team_2_id,
                     "over_number": int(key.split(".")[1]) - 1,
                     "ball_number": int(key.split(".")[2]),
