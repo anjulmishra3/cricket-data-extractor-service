@@ -1,4 +1,4 @@
-from data_extractors.table_schemas import connection, meta, engine, matches
+from data_extractors.pulselive.table_schemas import connection, meta, engine, matches
 
 import requests
 import datetime
@@ -9,12 +9,12 @@ LIST_MATCHES_URL = "https://cricketapi.platform.iplt20.com//fixtures"
 meta.create_all(engine)
 
 
-def process_list_matches_response(response_dict):
+def process_list_matches_response(response_dict, start_datetime):
     return_list = []
 
     for match in response_dict.get("content", []):
         # print(match.get("tournamentLabel", ""))
-        if ("IPL " in match.get("tournamentLabel", "")) and ("Women" not in match.get("tournamentLabel", "")) and (datetime.datetime.strptime(match.get("timestamp").split("+")[0], "%Y-%m-%dT%H:%M:%S") < datetime.datetime.now()):
+        if ("IPL " in match.get("tournamentLabel", "")) and ("Women" not in match.get("tournamentLabel", "")) and (datetime.datetime.strptime(match.get("timestamp").split("+")[0], "%Y-%m-%dT%H:%M:%S") < datetime.datetime.now()) and (datetime.datetime.strptime(match.get("timestamp").split("+")[0], "%Y-%m-%dT%H:%M:%S") > datetime.datetime.strptime(start_datetime, "%Y-%m-%dT%H:%M:%S")):
             details = match.get("scheduleEntry", {})
             match_dict = {
                 "match_id": details.get("matchId", {}).get("id"),
@@ -61,10 +61,10 @@ def process_list_matches_response(response_dict):
     return return_list
 
 
-def list_matches(list_matches_url):
+def list_matches(list_matches_url, start_datetime):
 
     params = {
-        "page": 0,
+        "page": 97,
         "pageSize": 300
     }
     final_matches_list = []
@@ -76,20 +76,35 @@ def list_matches(list_matches_url):
         print(response.status_code, response.text)
         response_dict = {}
 
-    pages = response_dict.get("pageInfo", {}).get("numPages")
+    pages = response_dict.get("pageInfo", {}).get("numPages") - 1
+    # pages = 97
 
-    final_matches_list.extend(process_list_matches_response(response_dict))
+    final_matches_list.extend(process_list_matches_response(response_dict, start_datetime))
+    # print(response_dict)
 
-    for page in range(1, pages):
-        params["page"] = page
+    while pages >= 1:
+        params["page"] = pages
         # print(params)
         response = requests.get(url=list_matches_url, params=params)
+        print("########################")
+        print(response_dict.get("pageInfo", {}).get("page"))
         if response.status_code == 200:
             response_dict = response.json()
+            if datetime.datetime.strptime(response_dict.get("content")[0].get("timestamp").split("+")[0],
+                                          "%Y-%m-%dT%H:%M:%S") < datetime.datetime.strptime(start_datetime,
+                                                                                            "%Y-%m-%dT%H:%M:%S"):
+                print("Khatam")
+                break
         else:
             response_dict = {}
 
-        final_matches_list.extend(process_list_matches_response(response_dict))
+
+
+        final_matches_list.extend(process_list_matches_response(response_dict, start_datetime))
+
+
+
+        pages -= 1
 
         # print(len(final_matches_list))
 
@@ -98,9 +113,9 @@ def list_matches(list_matches_url):
     return final_matches_list
 
 
-def insert_matches(matches_table, connection_object):
+def insert_matches(matches_table, connection_object, start_datetime):
 
-    matches_list = list_matches(LIST_MATCHES_URL)
+    matches_list = list_matches(LIST_MATCHES_URL, start_datetime)
 
     try:
         return_value = connection_object.execute(matches_table.insert(), matches_list)
@@ -111,4 +126,4 @@ def insert_matches(matches_table, connection_object):
     return return_value
 
 
-insert_matches(matches, connection)
+insert_matches(matches, connection, "2021-09-01T00:00:00")

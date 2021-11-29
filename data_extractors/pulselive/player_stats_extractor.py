@@ -1,4 +1,4 @@
-from data_extractors.table_schemas import engine, meta, players, connection
+from data_extractors.pulselive.table_schemas import engine, meta, players, connection
 from sqlalchemy import text
 
 import requests

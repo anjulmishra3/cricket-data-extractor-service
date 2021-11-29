@@ -1,10 +1,8 @@
-from data_extractors.table_schemas import connection, meta, engine, balls
+from data_extractors.pulselive.table_schemas import connection, meta, engine, balls
 from pymysql.err import IntegrityError
 from sqlalchemy import text
 
 import requests
-import datetime
-
 
 
 LIST_MATCHES_URL = "https://cricketapi.platform.iplt20.com//fixtures/"
@@ -76,18 +74,20 @@ def list_balls(match_details, list_balls_baseurl):
     return final_balls_list
 
 
-def list_match_details():
-    matches_query = text("select match_id, tournament_id, venue_id, team_1_id, team_2_id from matches")
-    match_details = connection.execute(matches_query).fetchall()
+def list_match_details(start_datetime):
+    matches_query = text(f"select match_id, tournament_id, venue_id, team_1_id, team_2_id from matches where match_date > :start_datetime")
+    match_details = connection.execute(matches_query, start_datetime=start_datetime).fetchall()
+
+    # print(match_details)
 
     return [list(match_detail) for match_detail in match_details]
 
 
-def insert_balls(balls_table, connection_object):
+def insert_balls(balls_table, connection_object, start_datetime):
 
     failed_rows = []
 
-    matches = list_match_details()
+    matches = list_match_details(start_datetime)
 
     balls_list = list_balls(matches, LIST_MATCHES_URL)
 
@@ -106,4 +106,4 @@ def insert_balls(balls_table, connection_object):
     return return_value
 
 
-insert_balls(balls, connection)
+insert_balls(balls, connection, "2021-09-01T00:00:00")
