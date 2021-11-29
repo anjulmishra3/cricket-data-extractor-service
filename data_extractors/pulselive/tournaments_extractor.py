@@ -1,4 +1,4 @@
-from data_extractors.table_schemas import connection, tournaments, meta, engine
+from data_extractors.pulselive.table_schemas import connection, tournaments, meta, engine
 
 import datetime
 import requests

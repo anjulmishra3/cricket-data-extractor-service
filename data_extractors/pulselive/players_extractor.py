@@ -1,4 +1,4 @@
-from data_extractors.table_schemas import engine, meta, players, connection
+from data_extractors.pulselive.table_schemas import engine, meta, players, connection
 from sqlalchemy import text
 
 import requests
@@ -47,10 +47,10 @@ def process_list_players(response_dict):
     # return players_dict
 
 
-def list_players(list_players_url):
+def list_players(list_players_url, tournament_ids):
 
     team_ids = list_team_ids()
-    tournament_ids = list_tournament_ids()
+    tournament_ids = list_tournament_ids() if not tournament_ids else tournament_ids
 
 
     for tournament_id in tournament_ids:
@@ -86,18 +86,28 @@ def list_players(list_players_url):
     # return players_dict
 
 
-def insert_players(players_table, connection_object):
+def insert_players(players_table, connection_object, bulk_ingest):
 
     # players_dict = list_players(LIST_PLAYERS_URL)
-    list_players(LIST_PLAYERS_URL)
+    list_players(LIST_PLAYERS_URL, tournament_ids=[22399])
 
-    try:
-        return_value = connection_object.execute(players_table.insert(), list(players_dict.values()))
-    except Exception as e:
-        print(e, list(players_dict.values())[0], len(list(players_dict.values())))
-        return
+    if not bulk_ingest:
+        for player in players_dict.values():
+            try:
+                return_value = players_table.insert().values(player)
+                return_value = connection_object.execute(return_value)
+                print(player["full_name"], return_value)
+            except Exception as e:
+                # print(player["full_name"])
+                pass
+    else:
+        try:
+            return_value = connection_object.execute(players_table.insert(), list(players_dict.values()))
+        except Exception as e:
+            print(e, list(players_dict.values())[0], len(list(players_dict.values())))
+            return
 
     return return_value
 
 
-insert_players(players, connection)
+insert_players(players, connection, bulk_ingest=False)
