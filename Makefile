@@ -1,6 +1,7 @@
 LOCAL_VARIABLES := FILESAVE_DIRECTORY="~/" \
 	CRICSHEET_IPL_FILES_DIRECTORY="~/Downloads/ipl_json/" \
 	CRICSHEET_T20I_FILES_DIRECTORY="~/Downloads/t20is_json/" \
+	SQL_CONNECTION_STRING="mysql+pymysql://rooter:pwd1234@localhost:3306/ipl" \
 
 create_env:
 	virtualenv venv
